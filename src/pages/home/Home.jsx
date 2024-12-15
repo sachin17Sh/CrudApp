@@ -1,73 +1,98 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import MUI_C from "../../lib/components/Components"
-import { EmployeeData } from "../../data/EmployeeData"
 import { useEffect, useState } from "react";
 import AddRecordForms from "./form/AddRecordForm";
 
-
-
 export default function Home() {
- const [data,setdata] = useState([])
- const [currentRecord, setCurrentRecord] = useState({
-  FirstName: '',
-  LastName: '',
-  EmployeeID: '',
-  Age: '',
-});
-  
- useEffect(()=>{
-  setdata(EmployeeData)
- },[])
-
-function handleEdit(id) {
-  const record = data.find((item) => item.id === id);
-  if (record) {
-    setCurrentRecord({
-      FirstName: record.FirstName,
-      LastName: record.LastName,
-      EmployeeID: record.EmployeeID,
-      Age: record.Age,
-    });
-  }
-}
- 
- function handleDelete(id){
-  if (id>0) {
-    if (window.confirm("Are you sure you want to delete the record")) {
-      const record = data.filter((item)=> item.id != id)
-      setdata(record)
-    }
-  }
- }
-
- function handleSubmit(values, isUpdate) {
-  if (isUpdate) {
-    setdata((prevData) =>
-      prevData.map((item) =>
-        item.EmployeeID === values.EmployeeID ? { ...item, ...values } : item
-      )
-    );
-  } else {
-    setdata((prevData) => [
-      ...prevData,
-      { id: prevData.length + 1, ...values },
-    ]);
-  }
-
-  setCurrentRecord({
+  const [data, setData] = useState([]);
+  const [currentRecord, setCurrentRecord] = useState({
     FirstName: '',
     LastName: '',
     EmployeeID: '',
     Age: '',
   });
-}
+
+
+  useEffect(() => {
+    fetch("http://localhost:3000/userData")
+      .then((response) => response.json())
+      .then((data) => setData(data))
+      .catch((error) => console.error("Error fetching data:", error));
+  }, []);
+
+  function handleEdit(id) {
+    const record = data.find((item) => item.id === id);
+    if (record) {
+      setCurrentRecord({
+        FirstName: record.FirstName,
+        LastName: record.LastName,
+        EmployeeID: record.EmployeeID,
+        Age: record.Age,
+      });
+    }
+  }
+
+  function handleDelete(id) {
+    if (window.confirm("Are you sure you want to delete the record?")) {
+      fetch(`http://localhost:3000/userData/${id}`, {
+        method: 'DELETE',
+      })
+        .then(() => {
+          setData(data.filter((item) => item.id !== id)); 
+        })
+        .catch((error) => console.error("Error deleting record:", error));
+    }
+  }
+
+
+  function handleSubmit(values, isUpdate) {
+    if (isUpdate) {
+
+      fetch(`http://localhost:3000/userData/${values.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      })
+        .then(() => {
+          setData((prevData) =>
+            prevData.map((item) =>
+              item.EmployeeID === values.EmployeeID ? { ...item, ...values } : item
+            )
+          );
+        })
+        .catch((error) => console.error("Error updating record:", error));
+    } else {
+ 
+      fetch("http://localhost:3000/userData", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      })
+        .then((response) => response.json())
+        .then((newRecord) => {
+          setData((prevData) => [...prevData, newRecord]);
+        })
+        .catch((error) => console.error("Error adding record:", error));
+    }
+
+    setCurrentRecord({
+      FirstName: '',
+      LastName: '',
+      EmployeeID: '',
+      Age: '',
+    });
+  }
 
   return (
     <>
       <h2 className="mt-5 text-center text-danger">Employee Records</h2>
-      <AddRecordForms initialValues={currentRecord}   onSubmit={handleSubmit}  /> 
-     
-      <MUI_C.Box >
+      <AddRecordForms initialValues={currentRecord} onSubmit={handleSubmit} />
+
+      <MUI_C.Box>
         <table className="table table-hover m-5 text-center">
           <thead>
             <tr>
@@ -81,9 +106,9 @@ function handleEdit(id) {
             </tr>
           </thead>
           <tbody>
-            {
-              data.map((item, index) => {
-                return <tr key={index}>
+            {data.map((item, index) => {
+              return (
+                <tr key={index}>
                   <td>{index + 1}</td>
                   <td>{item.id}</td>
                   <td>{item.FirstName}</td>
@@ -105,11 +130,11 @@ function handleEdit(id) {
                     </MUI_C.Button>
                   </td>
                 </tr>
-              })
-            }
+              );
+            })}
           </tbody>
         </table>
       </MUI_C.Box>
     </>
-  )
+  );
 }
